@@ -63,6 +63,31 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
    * TODO: Complete this function! Make sure you switch between lidar and radar
    * measurements.
    */
+      if (!is_initialized_)
+    {
+      if (meas_package.sensor_type_ == MeasurementPackage::LASER)
+      {
+        x_ << meas_package.raw_measurements_[0], //px
+              meas_package.raw_measurements_[1], //py
+              0, //v
+              0, //yaw
+              0; //yaw_dot
+      }
+      else if (meas_package.sensor_type_ == MeasurementPackage::RADAR)
+      {
+        double rho = meas_package.raw_measurements_[0];
+        double phi = meas_package.raw_measurements_[1];
+        x_ << rho*cosf(phi), //px
+              rho*sinf(phi), //py
+              0, //v
+              0, //yaw
+              0; //yaw_dot
+      }
+
+      time_us_ = meas_package.timestamp_;
+      is_initialized_ = true;
+      return;
+    }
 }
 
 void UKF::Prediction(double delta_t) {
