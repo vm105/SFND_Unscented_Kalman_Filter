@@ -41,7 +41,9 @@ class UKF {
    */
   void UpdateRadar(MeasurementPackage meas_package);
 
-
+  void AugmentedSigmaPoints();
+  void SigmaPointPrediction(double delta_t);
+  void PredictMeanAndCovariance();
   // initially set to false, set to true in first call of ProcessMeasurement
   bool is_initialized_;
 
@@ -57,8 +59,20 @@ class UKF {
   // state covariance matrix
   Eigen::MatrixXd P_;
 
+  // state vector predicted
+  Eigen::VectorXd x_pred_;
+
+  // state covariance matrix predicted
+  Eigen::MatrixXd P_pred_;
+
   // predicted sigma points matrix
   Eigen::MatrixXd Xsig_pred_;
+
+  // generated sigma points matrix
+  Eigen::MatrixXd Xsig_gen_;
+
+  // generated augmented sigma points matrix
+  Eigen::MatrixXd Xsig_aug_;
 
   // time when the state is true, in us
   long long time_us_;
