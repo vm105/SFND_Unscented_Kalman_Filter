@@ -4,6 +4,9 @@
 #include "Eigen/Dense"
 #include "measurement_package.h"
 
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
+
 class UKF {
  public:
   /**
@@ -41,11 +44,45 @@ class UKF {
    */
   void UpdateRadar(MeasurementPackage meas_package);
 
+  /**
+   * Calculate the augmented sigma points for prediction
+   */
   void AugmentedSigmaPoints();
+
+  /**
+   * Use the augmented sigma points to produce predicted sigma points 
+   *
+   * @param delta_t time delta between two measurements in us
+   */
   void SigmaPointPrediction(double delta_t);
+
+  /**
+   * Use the predicted sigma points to determine the new predicted state mean
+   * and covariance
+   */
   void PredictMeanAndCovariance();
+
+  /**
+   * Calculate the mean and covariance using sigma points
+   *
+   * @param sigma_points [in] sigma points
+   * @param mean  [out] mean vector
+   * @param cov  [out] covariance matrix
+   */
+  void SigmaPointsToMeanCov(MatrixXd& sigma_points, VectorXd& mean,
+    MatrixXd& cov);
+
+  /**
+   * Pass in the measurement package and use it to update the state mean and
+   * covariance. The function hanldes the update differently based on the sensor
+   * used to generate the measurement package.
+   *
+   * @param meas_package sensor generated data package
+   */
+  void Update(MeasurementPackage meas_package);
+
   // initially set to false, set to true in first call of ProcessMeasurement
-  bool is_initialized_;
+  bool is_initialized_ = false;
 
   // if this is false, laser measurements will be ignored (except for init)
   bool use_laser_;

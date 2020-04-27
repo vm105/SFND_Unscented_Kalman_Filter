@@ -5,6 +5,7 @@
 #include "sensors/lidar.h"
 #include "tools.h"
 
+#define DEBUG
 class Highway
 {
 public:
@@ -140,7 +141,14 @@ public:
     			double v2 = sin(yaw)*v;
 				estimate << traffic[i].ukf.x_[0], traffic[i].ukf.x_[1], v1, v2;
 				tools.estimations.push_back(estimate);
-	
+#ifdef DEBUG
+				std::cout << "X: " << traffic[i].ukf.x_(0) << std::endl;
+				std::cout << "Y: " << traffic[i].ukf.x_(1) << std::endl;
+				std::cout << "V: " << traffic[i].ukf.x_(2) << std::endl;
+				std::cout << "Yaw: " << traffic[i].ukf.x_(3) << std::endl;
+				std::cout << "YYaw_dot: " << traffic[i].ukf.x_(4) << std::endl;
+#endif
+
 			}
 		}
 		viewer->addText("Accuracy - RMSE:", 30, 300, 20, 1, 1, 1, "rmse");
