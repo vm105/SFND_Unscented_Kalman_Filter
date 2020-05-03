@@ -19,10 +19,10 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 30;
+  std_a_ = 20;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 30;
+  std_yawdd_ = 1.0;
 
   //px, py, v, phi, phi_dot
   n_x_ = 5;
@@ -90,10 +90,10 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
             0; //yaw_dot
 
       //P_?
-      P_ << 1, 0, 0, 0, 0,
-            0, 1, 0, 0, 0,
+      P_ << std_laspx_*std_laspx_, 0, 0, 0, 0,
+            0, std_laspy_*std_laspy_, 0, 0, 0,
             0, 0, 1000, 0, 0,
-            0, 0, 0, 1, 0,
+            0, 0, 0, 1000, 0,
             0, 0, 0, 0, 1000;
     }
     else if (meas_package.sensor_type_ == MeasurementPackage::RADAR)
@@ -107,16 +107,16 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
             0; //yaw_dot
 
       //P_ ?
-      P_ << 1, 0, 0, 0, 0,
-            0, 1, 0, 0, 0,
+      P_ << std_radr_, 0, 0, 0, 0,
+            0, std_radr_, 0, 0, 0,
             0, 0, 1000, 0, 0,
-            0, 0, 0, 1, 0,
+            0, 0, 0, 1000, 0,
             0, 0, 0, 0, 1000;
     }
   }
   else
   {
-    Prediction(meas_package.timestamp_ - time_us_);
+    Prediction((meas_package.timestamp_ - time_us_)/1000000.0);
     Update(meas_package);
   }
   time_us_ = meas_package.timestamp_;
@@ -210,7 +210,7 @@ void UKF::SigmaPointPrediction(double delta_t)
 }
 
 void UKF::SigmaPointsToMeanCov(MatrixXd& sigma_points, VectorXd& mean,
-  MatrixXd& cov)
+  MatrixXd& cov, bool normalize_angle)
 {
   // calculate mean
   for (int i = 0 ; i < 2*n_aug_+1; ++i)
@@ -220,9 +220,14 @@ void UKF::SigmaPointsToMeanCov(MatrixXd& sigma_points, VectorXd& mean,
   // calculate covariance matrix
   for (int i = 0; i < 2*n_aug_+1; ++i)
   {
-      cov += weights_(i) * (sigma_points.col(i) - mean) *
-        (sigma_points.col(i) - mean).transpose();
+    VectorXd mean_diff = sigma_points.col(i) - mean;
+    if (normalize_angle)
+    {
+      NormalizeAngle(mean_diff(3));
+    }
+    cov += weights_(i) * mean_diff * mean_diff.transpose();
   }
+
 }
 
 void UKF::PredictMeanAndCovariance()
@@ -237,7 +242,8 @@ void UKF::PredictMeanAndCovariance()
   P_pred.fill(0.0);
 
   //predict state mean and covariance
-  SigmaPointsToMeanCov(Xsig_pred_, x_pred, P_pred);
+  SigmaPointsToMeanCov(Xsig_pred_, x_pred, P_pred, true);
+  std::cout << "yaw_dot debug " << x_pred[4] << std::endl;
 
   x_pred_ = x_pred;
   P_pred_ = P_pred;
@@ -366,9 +372,21 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   Tc.fill(0.0);
   for (int i = 0; i < 2*n_aug_ + 1; ++i)
   {
-      Tc += weights_(i) * (Xsig_pred_.col(i) - x_) * (Zsig_pred.col(i) - z_pred)
-        .transpose();
+    // residual
+    VectorXd z_diff = Zsig_pred.col(i) - z_pred;
+    NormalizeAngle(z_diff(1));
+
+    // state difference
+    VectorXd x_diff = Xsig_pred_.col(i) - x_;
+    NormalizeAngle(x_diff(3));
+
+    Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
+
+
+  // residual
+  VectorXd z_diff = z - z_pred;
+  NormalizeAngle(z_diff(1));
 
   // calculate Kalman gain K;
   MatrixXd K = Tc * S.inverse();
@@ -389,5 +407,15 @@ void UKF::Update(MeasurementPackage meas_package)
   {
     // update for Radar
     UpdateRadar(meas_package);
+  }
+}
+
+void UKF::NormalizeAngle(double& angle, bool enabled)
+{
+  if (enabled)
+  {
+    // angle normalization
+    while (angle> M_PI) angle-=2.*M_PI;
+    while (angle<-M_PI) angle+=2.*M_PI;
   }
 }

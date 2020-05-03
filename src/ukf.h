@@ -63,6 +63,13 @@ class UKF {
   void PredictMeanAndCovariance();
 
   /**
+   * @brief Normalize angle
+   *
+   * @param angle [out] normalized angle
+   */
+  void NormalizeAngle(double& angle, bool enabled = true);
+
+  /**
    * Calculate the mean and covariance using sigma points
    *
    * @param sigma_points [in] sigma points
@@ -70,7 +77,7 @@ class UKF {
    * @param cov  [out] covariance matrix
    */
   void SigmaPointsToMeanCov(MatrixXd& sigma_points, VectorXd& mean,
-    MatrixXd& cov);
+    MatrixXd& cov, bool normalize_angle = false);
 
   /**
    * Pass in the measurement package and use it to update the state mean and
