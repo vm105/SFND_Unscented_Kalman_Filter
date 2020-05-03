@@ -5,7 +5,7 @@
 #include "sensors/lidar.h"
 #include "tools.h"
 
-#define DEBUG
+// #define DEBUG
 class Highway
 {
 public:
