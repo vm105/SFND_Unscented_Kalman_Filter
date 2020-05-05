@@ -40,8 +40,12 @@ UKF::UKF() {
   {
       weights_(i) = 0.5/(lambda_ + n_aug_);
   }
+
+  //init NIS
   NIS_laser_ = 0.0;
+
   NIS_radar_ = 0.0;
+
   /**
    * DO NOT MODIFY measurement noise values below.
    * These are provided by the sensor manufacturer.
@@ -61,24 +65,16 @@ UKF::UKF() {
 
   // Radar measurement noise standard deviation radius change in m/s
   std_radrd_ = 0.3;
-  
+
   /**
    * End DO NOT MODIFY section for measurement noise values 
    */
-  
-  /**
-   * TODO: Complete the initialization. See ukf.h for other member properties.
-   * Hint: one or more values initialized above might be wildly off...
-   */
+
 }
 
 UKF::~UKF() {}
 
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
-  /**
-   * TODO: Complete this function! Make sure you switch between lidar and radar
-   * measurements.
-   */
 
   if (!is_initialized_)
   {
@@ -86,13 +82,12 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     {
       x_ << meas_package.raw_measurements_[0], //px
             meas_package.raw_measurements_[1], //py
-            0, //v
-            0, //yaw
-            0; //yaw_dot
+            0.0, //v
+            0.0, //yaw
+            0.0; //yaw_dot
 
-      //P_?
-      P_ << 1, 0, 0, 0, 0,
-            0, 1, 0, 0, 0,
+      P_ << std_laspx_* std_laspx_, 0, 0, 0, 0,
+            0, std_laspy_ * std_laspy_, 0, 0, 0,
             0, 0, 1, 0, 0,
             0, 0, 0, 1, 0,
             0, 0, 0, 0, 1;
@@ -101,21 +96,20 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     {
       double rho = meas_package.raw_measurements_(0);
       double phi = meas_package.raw_measurements_(1);
-      double rhodot = meas_package.raw_measurements_(2);
-      double x = rho * cos(phi);
-      double y = rho * sin(phi);
-      double vx = rhodot * cos(phi);
-      double vy = rhodot * sin(phi);
-      double v = sqrt(vx * vx + vy * vy);
-      x_ << x, y, v, rho, rhodot;
-      
-      //state covariance matrix
-      //***** values can be tuned *****
-      P_ << 1000, 0, 0, 0, 0,
-            0, 1000, 0, 0, 0,
-            0, 0, 1000, 0, 0,
-            0, 0, 0, 1000, 0,
-            0, 0, 0, 0, 1000;
+      double px = rho * cos(phi);
+      double py = rho * sin(phi);
+
+      x_ << px,
+            py,
+            0.0,
+            0.0,
+            0.0;
+
+      P_ << 1, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 1, 0,
+            0, 0, 0, 0, 1;
     }
   }
   else
@@ -252,23 +246,13 @@ void UKF::PredictMeanAndCovariance()
 }
 
 void UKF::Prediction(double delta_t) {
-  /**
-   * TODO: Complete this function! Estimate the object's location. 
-   * Modify the state vector, x_. Predict sigma points, the state, 
-   * and the state covariance matrix.
-   */
+
   AugmentedSigmaPoints();
   SigmaPointPrediction(delta_t);
   PredictMeanAndCovariance();
 }
 
 void UKF::UpdateLidar(MeasurementPackage meas_package) {
-  /**
-   * TODO: Complete this function! Use lidar data to update the belief 
-   * about the object's position. Modify the state vector, x_, and 
-   * covariance, P_.
-   * You can also calculate the lidar NIS, if desired.
-   */
 
   // measurement dimension
   int n_z = 2;
@@ -323,8 +307,6 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
 
-
-  // residual
   VectorXd z_diff = z - z_pred;
   NIS_laser_ = z_diff.transpose() * S.inverse() * z_diff;
 
@@ -337,12 +319,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 }
 
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
-  /**
-   * TODO: Complete this function! Use radar data to update the belief 
-   * about the object's position. Modify the state vector, x_, and 
-   * covariance, P_.
-   * You can also calculate the radar NIS, if desired.
-   */
+
   //measurement dimension
   int n_z = 3;
 
@@ -404,8 +381,6 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
 
-
-  // residual
   VectorXd z_diff = z - z_pred;
   NormalizeAngle(z_diff(1));
   NIS_radar_ = z_diff.transpose() * S.inverse() * z_diff;
